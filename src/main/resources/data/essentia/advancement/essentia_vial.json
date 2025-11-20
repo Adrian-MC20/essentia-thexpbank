@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:recipe/root",
+  "parent": "minecraft:recipes/root",
   "criteria": {
     "has_amethyst_shard": {
       "trigger": "minecraft:inventory_changed",
