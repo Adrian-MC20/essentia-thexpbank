@@ -1,22 +1,22 @@
 package ro.maleficent.essentia.registry;
 
-import net.minecraft.component.ComponentType;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
-
 import static ro.maleficent.essentia.Essentia.MOD_ID;
+
+import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ExtraCodecs;
 
 public class ModDataComponents {
 
     // Stored XP for Essential Vial (per stack)
-    public static final ComponentType<Integer> STORED_XP =
+    public static final DataComponentType<Integer> STORED_XP =
             Registry.register(
-                    Registries.DATA_COMPONENT_TYPE,
-                    Identifier.of(MOD_ID, "stored_xp"),
-                    ComponentType.<Integer>builder()
-                            .codec(Codecs.NON_NEGATIVE_INT)
+                    BuiltInRegistries.DATA_COMPONENT_TYPE,
+                    ResourceLocation.fromNamespaceAndPath(MOD_ID, "stored_xp"),
+                    DataComponentType.<Integer>builder()
+                            .persistent(ExtraCodecs.NON_NEGATIVE_INT)
                             .build());
 
     public static void register(){
