@@ -1,5 +1,7 @@
 package ro.maleficent.essentia.item;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.NotNullByDefault;
 import ro.maleficent.essentia.registry.ModDataComponents;
 
 import java.util.function.Consumer;
@@ -58,7 +60,7 @@ public class EssentiaVialItem extends Item {
     }
 
     @Override
-    public InteractionResult use(Level world, Player player, InteractionHand hand){
+    public @NotNull InteractionResult use(Level world, Player player, InteractionHand hand){
         ItemStack stack = player.getItemInHand(hand);
 
         // Don't do logic twice on the client
