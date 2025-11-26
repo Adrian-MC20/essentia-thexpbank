@@ -1,7 +1,10 @@
 package ro.maleficent.essentia.item;
 
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemUseAnimation;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.NotNullByDefault;
 import ro.maleficent.essentia.registry.ModDataComponents;
 
 import java.util.function.Consumer;
@@ -31,12 +34,14 @@ public class EssentiaVialItem extends Item {
 
     // Helper: set stored XP and update visual damage
     public static void setStoredXp(ItemStack stack, int amount){
-        int clamped = Math.max(0, Math.min(CAPACITY, amount));
-        stack.set(ModDataComponents.STORED_XP, clamped);
+        // Clamp XP to valid bounds
+        int storedXp = Math.max(0, Math.min(CAPACITY, amount));
 
-        // Damage grows with fill level
-        int damage = clamped;
-        stack.setDamageValue(damage);
+        // Store XP into component
+        stack.set(ModDataComponents.STORED_XP, storedXp);
+
+        // Use stored XP as model selector via item damage
+        stack.setDamageValue(storedXp);
     }
 
     // Helper: compute how much space is left
@@ -59,40 +64,100 @@ public class EssentiaVialItem extends Item {
         player.giveExperiencePoints(-amount);
     }
 
+    // Drink animation like a potion
     @Override
-    public @NotNull InteractionResult use(Level world, Player player, InteractionHand hand){
+    public @NotNull ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.DRINK;
+    }
+
+    // Duration of the drink animation (32 ticks = vanilla potion)
+    @Override
+    public int getUseDuration(ItemStack itemStack, LivingEntity livingEntity) {
+        return 32;
+    }
+
+    // Right-click behaviour
+    @Override
+    public @NotNull InteractionResult use(Level level, Player player, InteractionHand hand){
         ItemStack stack = player.getItemInHand(hand);
-
-        // Don't do logic twice on the client
-        if (world.isClientSide()){
-            return InteractionResult.SUCCESS;
-        }
-
         int stored = getStoredXp(stack);
 
-        if (player.isShiftKeyDown()){
-            // Deposit: player -> vial
-            int remaining = getRemainingCapacity(stack);
-            if (remaining > 0){
-                int playerXp = getPlayerTotalXp(player);
-                int toDeposit = Math.min(remaining, playerXp);
+        // 1. SNEAKING = DEPOSIT (instant)
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide()) {
+                int remaining = getRemainingCapacity(stack);
+                if (remaining > 0) {
+                    int playerXp = getPlayerTotalXp(player);
+                    int toDeposit = Math.min(remaining, playerXp);
 
-                if (toDeposit > 0) {
-                    removeXpFromPlayer(player, toDeposit);
-                    setStoredXp(stack, stored + toDeposit);
+                    if (toDeposit > 0) {
+                        removeXpFromPlayer(player, toDeposit);
+                        setStoredXp(stack, stored + toDeposit);
+
+                        // Optional: bottle fill sound
+                        level.playSound(
+                                null,
+                                player.getX(), player.getY(), player.getZ(),
+                                SoundEvents.BOTTLE_FILL,
+                                SoundSource.PLAYERS,
+                                1.0f,
+                                1.0f
+                        );
+                    }
                 }
             }
+            // sidedSuccess is the usual pattern for use()
             return InteractionResult.SUCCESS;
-        } else {
-            // Withdraw: vial -> player
-            if (stored > 0){
+        }
+
+        // 2. Normal right-click with stored XP = start drink animation
+        if (stored > 0) {
+            player.startUsingItem(hand);
+            return InteractionResult.CONSUME;
+        }
+
+        // 3. Normal right-click with empty vial = nothing special
+        return InteractionResult.PASS;
+    }
+
+    @Override
+    public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseTicks) {
+        if (!level.isClientSide()) {
+            return;
+        }
+
+        // Every 4 ticks, same as vanilla potion
+        if (remainingUseTicks % 4 == 0) {
+            entity.playSound(
+                    SoundEvents.GENERIC_DRINK.value(),
+                    0.5F,
+                    1.0F
+            );
+        }
+    }
+
+    // Called when drink animation finishes
+    @Override
+    public @NotNull ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
+        if(!level.isClientSide() && entity instanceof  Player player) {
+            int stored = getStoredXp(stack);
+
+            if (stored > 0) {
                 addXpToPlayer(player, stored);
                 setStoredXp(stack, 0);
-                return InteractionResult.SUCCESS;
-            }
 
-            return InteractionResult.PASS;
+                level.playSound(
+                        null,
+                        player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.GENERIC_DRINK,
+                        SoundSource.PLAYERS,
+                        1.0F,
+                        1.0F
+                );
+            }
         }
+
+        return stack;
     }
 
     @Override
@@ -101,7 +166,7 @@ public class EssentiaVialItem extends Item {
         return false;
     }
 
-    @SuppressWarnings("deprecated")
+    @SuppressWarnings("deprecation")
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
         super.appendHoverText(stack, context, displayComponent, textConsumer, type);
