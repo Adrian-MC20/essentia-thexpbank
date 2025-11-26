@@ -1,6 +1,6 @@
 # Essentia
 
-Essentia is a lightweight Fabric mod for Minecraft 1.21.10 that introduces a clean and intuitive system for storing and managing player XP.
+Essentia is a lightweight Fabric mod for Minecraft that introduces a clean and intuitive system for storing and managing player XP.
 
 The mod focuses on simplicity, clarity, and expandability. Version 1 adds the Essentia Vial, with future updates bringing the Essentia Bank block and a full XP management interface.
 
